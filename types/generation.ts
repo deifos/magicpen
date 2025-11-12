@@ -7,7 +7,7 @@ export type GenerationResult = {
     content_type: string;
   }[];
   timestamp: number;
-  status: "processing" | "completed" | "error";
+  status: "processing" | "transcribing" | "generating" | "completed" | "error";
   error?: string;
 };
 

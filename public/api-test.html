@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MagicPen API Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #3b82f6;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        input[type="text"],
+        input[type="file"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 80px;
+            font-family: inherit;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 8px;
+            border: 2px solid #e5e7eb;
+        }
+        .result h3 {
+            color: #374151;
+            margin-top: 0;
+        }
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .result-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        .result-card h4 {
+            margin-top: 0;
+            color: #3b82f6;
+        }
+        .result-card img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        .transcription {
+            font-size: 18px;
+            line-height: 1.6;
+            color: #374151;
+            text-align: center;
+            padding: 20px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+        .spinner {
+            border: 3px solid #e5e7eb;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 MagicPen API Test</h1>
+        <p class="subtitle">Test the storybook generation API</p>
+
+        <form id="testForm">
+            <div class="form-group">
+                <label>Input Method:</label>
+                <select id="inputMethod" onchange="toggleInputMethod()">
+                    <option value="file">Upload File</option>
+                    <option value="url">Image URL</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="fileInput">
+                <label>Upload Image:</label>
+                <input type="file" id="imageFile" accept="image/*">
+            </div>
+
+            <div class="form-group" id="urlInput" style="display: none;">
+                <label>Image URL:</label>
+                <input type="text" id="imageUrl" placeholder="https://example.com/image.jpg">
+            </div>
+
+            <div class="form-group">
+                <label>Style:</label>
+                <select id="styleUrl">
+                    <option value="https://v3b.fal.media/files/b/lion/IEP3uGaGWS72ZkUem9cKV_style1.png">Style 1 (Default)</option>
+                    <option value="https://v3b.fal.media/files/b/panda/9zG6V8gEHgbrtSwC7pgLA_style2.png">Style 2</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Previous Context (Optional - for incremental stories):</label>
+                <textarea id="previousContext" placeholder="Leave empty for first page, or enter previously transcribed text..."></textarea>
+            </div>
+
+            <button type="submit">✨ Generate Storybook Page</button>
+        </form>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function toggleInputMethod() {
+            const method = document.getElementById('inputMethod').value;
+            document.getElementById('fileInput').style.display = method === 'file' ? 'block' : 'none';
+            document.getElementById('urlInput').style.display = method === 'url' ? 'block' : 'none';
+        }
+
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Processing your handwriting and generating artwork...</p>
+                    <p style="font-size: 14px; color: #9ca3af;">This may take 30-60 seconds</p>
+                </div>
+            `;
+
+            try {
+                const inputMethod = document.getElementById('inputMethod').value;
+                const styleUrl = document.getElementById('styleUrl').value;
+                const previousContext = document.getElementById('previousContext').value.trim();
+
+                let requestBody = {
+                    styleUrl,
+                };
+
+                if (previousContext) {
+                    requestBody.previousContext = previousContext;
+                }
+
+                if (inputMethod === 'file') {
+                    const fileInput = document.getElementById('imageFile');
+                    if (!fileInput.files[0]) {
+                        throw new Error('Please select a file');
+                    }
+
+                    // Convert to base64
+                    const base64 = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(fileInput.files[0]);
+                    });
+
+                    requestBody.imageBase64 = base64;
+                } else {
+                    const imageUrl = document.getElementById('imageUrl').value.trim();
+                    if (!imageUrl) {
+                        throw new Error('Please enter an image URL');
+                    }
+                    requestBody.imageUrl = imageUrl;
+                }
+
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || data.message || 'Request failed');
+                }
+
+                // Display results
+                resultDiv.innerHTML = `
+                    <div class="result">
+                        <h3>✅ Success!</h3>
+                        <div class="result-grid">
+                            <div class="result-card">
+                                <h4>📖 Transcribed Text</h4>
+                                <div class="transcription">"${data.transcription}"</div>
+                                <p style="font-size: 12px; color: #6b7280; margin-top: 10px;">
+                                    <strong>Generation Prompt:</strong> ${data.generationPrompt}
+                                </p>
+                            </div>
+                            <div class="result-card">
+                                <h4>🎨 Generated Illustration</h4>
+                                <img src="${data.generatedImages[0].url}" alt="Generated illustration">
+                            </div>
+                        </div>
+                        <details style="margin-top: 20px;">
+                            <summary style="cursor: pointer; font-weight: 600; color: #374151;">View Full Response</summary>
+                            <pre style="background: #f3f4f6; padding: 15px; border-radius: 8px; overflow-x: auto; font-size: 12px; margin-top: 10px;">${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
