@@ -16,10 +16,26 @@ export async function POST(request: NextRequest) {
     const body: GenerateRequest = await request.json();
     const { imageUrl, imageBase64, styleUrl, previousContext } = body;
 
+    console.log("📥 API Request received:", {
+      hasImageUrl: !!imageUrl,
+      hasImageBase64: !!imageBase64,
+      imageBase64Length: imageBase64?.length || 0,
+      styleUrl,
+      previousContextLength: previousContext?.length || 0,
+    });
+
     // Validate input
     if (!imageUrl && !imageBase64) {
+      console.error("❌ Validation failed: No image provided");
       return NextResponse.json(
-        { error: "Either imageUrl or imageBase64 is required" },
+        {
+          error: "Either imageUrl or imageBase64 is required",
+          received: {
+            hasImageUrl: !!imageUrl,
+            hasImageBase64: !!imageBase64,
+            bodyKeys: Object.keys(body)
+          }
+        },
         { status: 400 }
       );
     }
@@ -28,15 +44,33 @@ export async function POST(request: NextRequest) {
 
     // Handle image upload
     if (imageBase64) {
-      // Convert base64 to blob and upload
-      const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
-      const buffer = Buffer.from(base64Data, "base64");
-      const blob = new Blob([buffer], { type: "image/jpeg" });
-      const file = new File([blob], "upload.jpg", { type: "image/jpeg" });
-      uploadedImageUrl = await uploadToFal(file);
+      try {
+        console.log("🖼️  Converting base64 to file...");
+        // Convert base64 to blob and upload
+        const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+        const buffer = Buffer.from(base64Data, "base64");
+        console.log("📦 Buffer size:", buffer.length, "bytes");
+
+        const blob = new Blob([buffer], { type: "image/jpeg" });
+        const file = new File([blob], "upload.jpg", { type: "image/jpeg" });
+
+        console.log("☁️  Uploading to Fal...");
+        uploadedImageUrl = await uploadToFal(file);
+        console.log("✅ Upload successful:", uploadedImageUrl);
+      } catch (uploadError) {
+        console.error("❌ Upload failed:", uploadError);
+        return NextResponse.json(
+          {
+            error: "Failed to upload image",
+            message: uploadError instanceof Error ? uploadError.message : "Unknown error"
+          },
+          { status: 500 }
+        );
+      }
     } else if (imageUrl) {
       // Use provided URL directly
       uploadedImageUrl = imageUrl;
+      console.log("🔗 Using provided URL:", imageUrl);
     } else {
       return NextResponse.json(
         { error: "Invalid image input" },
