@@ -7,7 +7,6 @@ import {
   useImperativeHandle,
   forwardRef,
 } from "react";
-import { Alert } from "@heroui/alert";
 import { useHandTracking, useCamera, useTapGesture } from "@/hooks";
 import { CameraView, GestureMessage, InstructionsCard } from "./camera";
 
@@ -43,21 +42,71 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
         id: "style1",
         name: "Style 1",
         image: "/styles/style1.png",
-        url: "https://v3b.fal.media/files/b/lion/IEP3uGaGWS72ZkUem9cKV_style1.png"
+        url: "https://v3b.fal.media/files/b/lion/IEP3uGaGWS72ZkUem9cKV_style1.png",
       },
       {
         id: "style2",
         name: "Style 2",
         image: "/styles/style2.png",
-        url: "https://v3b.fal.media/files/b/panda/9zG6V8gEHgbrtSwC7pgLA_style2.png"
+        url: "https://v3b.fal.media/files/b/panda/9zG6V8gEHgbrtSwC7pgLA_style2.png",
       },
     ];
 
-    const { gestureRecognizer, isLoading: isGestureLoading } = useHandTracking();
-    const { isReady } = useCamera(videoRef, canvasRef, {
-      width: 480,
-      height: 360,
-    });
+    const [isReady, setIsReady] = useState(false);
+    const streamRef = useRef<MediaStream | null>(null);
+    const { gestureRecognizer, isLoading: isGestureLoading } =
+      useHandTracking();
+
+    // Start/Stop Camera based on captureEnabled
+    useEffect(() => {
+      const startCamera = async () => {
+        try {
+          console.log("Starting camera...");
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "user", width: 480, height: 360 },
+          });
+
+          if (videoRef.current && canvasRef.current) {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            video.srcObject = stream;
+            streamRef.current = stream;
+
+            video.addEventListener("loadedmetadata", async () => {
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+              await video.play();
+              setIsReady(true);
+              console.log("Camera ready");
+            });
+          }
+        } catch (err) {
+          console.error("Error accessing camera:", err);
+        }
+      };
+
+      const stopCamera = () => {
+        console.log("Stopping camera...");
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
+        }
+        if (videoRef.current) {
+          videoRef.current.srcObject = null;
+        }
+        setIsReady(false);
+      };
+
+      if (captureEnabled) {
+        startCamera();
+      } else {
+        stopCamera();
+      }
+
+      return () => {
+        stopCamera();
+      };
+    }, [captureEnabled, videoRef, canvasRef]);
 
     // Expose capture function via ref
     useImperativeHandle(ref, () => ({
@@ -83,12 +132,15 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
       if (captureEnabled) {
         // Start countdown for user to move hand
         setIsWaitingToCapture(true);
-        setCaptureCountdown(2);
+        setCaptureCountdown(5);
 
-        // Countdown from 2 to 1
-        setTimeout(() => setCaptureCountdown(1), 1000);
+        // Countdown from 5 to 1
+        setTimeout(() => setCaptureCountdown(4), 1000);
+        setTimeout(() => setCaptureCountdown(3), 2000);
+        setTimeout(() => setCaptureCountdown(2), 3000);
+        setTimeout(() => setCaptureCountdown(1), 4000);
 
-        // Capture after 2 seconds
+        // Capture after 5 seconds
         setTimeout(() => {
           setMessage("✨💥 SPELL CAST! CAPTURING MAGIC... 💥✨");
           setTimeout(() => setMessage(""), 3000);
@@ -97,7 +149,7 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
 
           // Capture and process the frame
           if (onCapture && canvasRef.current) {
-            const selectedStyleObj = styles.find(s => s.id === selectedStyle);
+            const selectedStyleObj = styles.find((s) => s.id === selectedStyle);
             const styleUrl = selectedStyleObj?.url || styles[0].url;
 
             canvasRef.current.toBlob((blob) => {
@@ -106,9 +158,11 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
               }
             }, "image/jpeg");
           }
-        }, 2000);
+        }, 5000);
       } else {
-        setMessage("✨ Spell detected! (Capture disabled - turn it on to cast real magic!)");
+        setMessage(
+          "✨ Spell detected! (Capture disabled - turn it on to cast real magic!)"
+        );
         setTimeout(() => setMessage(""), 3000);
       }
     };
@@ -120,7 +174,8 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
 
     const { detectTap } = useTapGesture(handleTapDetected, {
       onProgressUpdate: (progress) => {
-        setGestureProgress(progress);
+        // Only show progress if capture is enabled
+        setGestureProgress(captureEnabled ? progress : 0);
       },
       isOnCooldown: cooldownRemaining > 0,
       onCooldownAttempt: handleCooldownAttempt,
@@ -150,6 +205,11 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
     }, [cooldownEndsAt]);
 
     useEffect(() => {
+      // Only process frames when camera is enabled and ready
+      if (!captureEnabled || !isReady) {
+        return;
+      }
+
       let animationFrameId: number;
       let lastVideoTime = -1;
 
@@ -191,7 +251,7 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
         if (
           gestureRecognizer &&
           !isGestureLoading &&
-          typeof gestureRecognizer.recognizeForVideo === 'function' &&
+          typeof gestureRecognizer.recognizeForVideo === "function" &&
           video.readyState >= 2
         ) {
           const currentTime = video.currentTime;
@@ -200,12 +260,16 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
 
             try {
               const nowInMs = performance.now();
-              const results = gestureRecognizer.recognizeForVideo(video, nowInMs);
+              const results = gestureRecognizer.recognizeForVideo(
+                video,
+                nowInMs
+              );
 
               // Always update gesture state, even during cooldown
               if (results && results.gestures && results.gestures.length > 0) {
                 // Extract gesture name
-                const gesture = results.gestures[0]?.[0]?.categoryName || "None";
+                const gesture =
+                  results.gestures[0]?.[0]?.categoryName || "None";
                 detectTap(gesture);
               } else {
                 // No gesture detected, pass "None"
@@ -213,7 +277,10 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
               }
             } catch (error) {
               // Silently ignore errors during initialization
-              if (error instanceof Error && !error.message.includes('XNNPACK')) {
+              if (
+                error instanceof Error &&
+                !error.message.includes("XNNPACK")
+              ) {
                 console.error("Error during gesture recognition:", error);
               }
             }
@@ -230,7 +297,16 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
           cancelAnimationFrame(animationFrameId);
         }
       };
-    }, [gestureRecognizer, isGestureLoading, detectTap, cooldownRemaining]);
+    }, [
+      gestureRecognizer,
+      isGestureLoading,
+      detectTap,
+      cooldownRemaining,
+      captureEnabled,
+      isReady,
+      videoRef,
+      canvasRef,
+    ]);
 
     return (
       <div className="flex flex-col items-center gap-4 w-full">
@@ -238,6 +314,13 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
           videoRef={videoRef}
           canvasRef={canvasRef}
           isLoading={!isReady}
+          captureEnabled={captureEnabled}
+          setCaptureEnabled={setCaptureEnabled}
+          gestureProgress={gestureProgress}
+          cooldownRemaining={cooldownRemaining}
+          isWaitingToCapture={isWaitingToCapture}
+          captureCountdown={captureCountdown}
+          showCooldownWarning={showCooldownWarning}
         />
 
         {/* Style Picker */}
@@ -262,7 +345,7 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
                       className="w-full h-full object-cover"
                       style={{
                         transform: "scale(2)",
-                        objectPosition: "25% 25%"
+                        objectPosition: "25% 25%",
                       }}
                     />
                     {selectedStyle === style.id && (
@@ -271,11 +354,13 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
                       </div>
                     )}
                   </div>
-                  <p className={`text-xs text-center py-1 ${
-                    selectedStyle === style.id
-                      ? "bg-blue-500 text-white font-semibold"
-                      : "bg-default-200"
-                  }`}>
+                  <p
+                    className={`text-xs text-center py-1 ${
+                      selectedStyle === style.id
+                        ? "bg-blue-500 text-white font-semibold"
+                        : "bg-default-200"
+                    }`}
+                  >
                     {style.name}
                   </p>
                 </button>
@@ -301,80 +386,6 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
           </div>
         )}
 
-        {/* Toggle for capture */}
-        <div className="w-full px-4">
-          <label className="flex items-center justify-between p-3 bg-default-100 rounded-lg cursor-pointer hover:bg-default-200 transition-colors">
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold">
-                Enable Capture & Generation
-              </span>
-              <span className="text-xs text-default-500">
-                {captureEnabled
-                  ? "Gestures will capture images"
-                  : "Test gestures without capturing"}
-              </span>
-            </div>
-            <input
-              type="checkbox"
-              checked={captureEnabled}
-              onChange={(e) => setCaptureEnabled(e.target.checked)}
-              className="w-10 h-6 appearance-none bg-default-300 rounded-full relative cursor-pointer transition-colors checked:bg-blue-500 before:content-[''] before:absolute before:w-5 before:h-5 before:rounded-full before:bg-white before:top-0.5 before:left-0.5 before:transition-transform checked:before:translate-x-4"
-            />
-          </label>
-        </div>
-
-        {isWaitingToCapture && (
-          <div className="w-full px-4">
-            <Alert
-              color="primary"
-              title="✋ Move your hand away!"
-              description={`Capturing in ${captureCountdown}...`}
-              className="animate-pulse"
-            />
-          </div>
-        )}
-
-        {showCooldownWarning && cooldownRemaining > 0 && !isWaitingToCapture && (
-          <div className="w-full px-4">
-            <Alert
-              color="warning"
-              title="⚠️ Magic still recharging!"
-              description={`Wait ${Math.ceil(cooldownRemaining / 1000)} more seconds to cast again`}
-              className="animate-pulse"
-            />
-          </div>
-        )}
-
-        {cooldownRemaining > 0 && !showCooldownWarning && !isWaitingToCapture && (
-          <div className="w-full px-4">
-            <Alert
-              color="warning"
-              title="✏️ Write more! Magic recharging..."
-              description={`Next spell in ${Math.ceil(cooldownRemaining / 1000)} seconds`}
-              variant="flat"
-            />
-          </div>
-        )}
-
-        {cooldownRemaining === 0 && gestureProgress > 0 && !isWaitingToCapture && (
-          <div className="w-full px-4">
-            <div className="relative w-full h-6 bg-default-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-100 flex items-center justify-center"
-                style={{ width: `${gestureProgress}%` }}
-              >
-                {gestureProgress > 10 && (
-                  <span className="text-xs font-bold text-white">
-                    {Math.round(gestureProgress)}%
-                  </span>
-                )}
-              </div>
-            </div>
-            <p className="text-xs text-center text-default-600 mt-1">
-              Hold thumbs up to cast spell! 👍✨
-            </p>
-          </div>
-        )}
         <GestureMessage message={message} tapCount={tapCount} />
         <InstructionsCard />
       </div>

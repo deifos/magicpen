@@ -1,15 +1,54 @@
+"use client";
+
 import { Card } from "@heroui/card";
 import { Spinner } from "@heroui/spinner";
+import { Button } from "@heroui/button";
+import { useDisclosure } from "@heroui/modal";
+import { Trash2 } from "lucide-react";
 import { GenerationResult } from "@/types/generation";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import Image from "next/image";
 
 interface GenerationResultProps {
   result: GenerationResult;
+  onDelete?: (id: string) => void;
 }
 
-export function GenerationResultCard({ result }: GenerationResultProps) {
+export function GenerationResultCard({
+  result,
+  onDelete,
+}: GenerationResultProps) {
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
+  const handleDelete = () => {
+    onDelete?.(result.id);
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-8">
+    <div className="relative grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-8">
+      {/* Delete Button */}
+      <Button
+        isIconOnly
+        color="danger"
+        variant="flat"
+        size="sm"
+        className="absolute top-2 right-2 z-10"
+        onPress={onOpen}
+        title="Delete this page"
+      >
+        <Trash2 size={18} />
+      </Button>
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isOpen}
+        onClose={onClose}
+        onConfirm={handleDelete}
+        title="Delete Story Page"
+        message="Are you sure you want to delete this story page? This action cannot be undone."
+        confirmText="Delete Page"
+        cancelText="Keep Page"
+      />
       {/* Left side: Transcribed text */}
       <Card className="p-6 min-h-[400px] flex flex-col">
         <h3 className="text-lg font-semibold mb-4 text-blue-600 text-center">

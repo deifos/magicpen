@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
           received: {
             hasImageUrl: !!imageUrl,
             hasImageBase64: !!imageBase64,
-            bodyKeys: Object.keys(body)
-          }
+            bodyKeys: Object.keys(body),
+          },
         },
         { status: 400 }
       );
@@ -62,7 +62,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             error: "Failed to upload image",
-            message: uploadError instanceof Error ? uploadError.message : "Unknown error"
+            message:
+              uploadError instanceof Error
+                ? uploadError.message
+                : "Unknown error",
           },
           { status: 500 }
         );

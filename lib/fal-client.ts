@@ -74,8 +74,7 @@ export async function transcribeImage(
   try {
     // Extract JSON from markdown code blocks if present
     const jsonMatch = finalText.match(/```json\s*([\s\S]*?)\s*```/) ||
-                      finalText.match(/```\s*([\s\S]*?)\s*```/) ||
-                      [null, finalText];
+      finalText.match(/```\s*([\s\S]*?)\s*```/) || [null, finalText];
     const jsonStr = jsonMatch[1] || finalText;
     const parsed = JSON.parse(jsonStr.trim());
 
@@ -105,7 +104,7 @@ async function getStyleImageUrl(stylePath: string): Promise<string> {
   // Fetch the style image from public folder
   const response = await fetch(stylePath);
   const blob = await response.blob();
-  const fileName = stylePath.split('/').pop() || 'style.png';
+  const fileName = stylePath.split("/").pop() || "style.png";
   const file = new File([blob], fileName, { type: "image/png" });
 
   // Upload to Fal storage
@@ -141,8 +140,8 @@ export async function generateImage(
     imageUrl = await getStyleImageUrl("/styles/style1.png");
   }
 
-  // Add style instruction to prompt
-  const enhancedPrompt = `${prompt}. Use the style of the reference image provided.`;
+  // Add style instruction to prompt - be very explicit to use only artistic style, not subjects
+  const enhancedPrompt = `${prompt}. IMPORTANT: Use ONLY the artistic style, art technique, colors, brush strokes, and rendering style from the reference image. DO NOT copy or include any characters, subjects, or objects from the reference image. Create entirely new subjects based on the story description above, but rendered in the artistic style of the reference.`;
 
   const result = await fal.subscribe("fal-ai/reve/fast/remix", {
     input: {

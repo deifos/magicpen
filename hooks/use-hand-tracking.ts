@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { GestureRecognizer, FilesetResolver } from "@mediapipe/tasks-vision";
 
 export function useHandTracking() {
-  const [gestureRecognizer, setGestureRecognizer] = useState<GestureRecognizer | null>(
-    null
-  );
+  const [gestureRecognizer, setGestureRecognizer] =
+    useState<GestureRecognizer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +34,7 @@ export function useHandTracking() {
         });
 
         // Give the recognizer a moment to fully initialize
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         setGestureRecognizer(recognizer);
         setIsLoading(false);

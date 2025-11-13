@@ -12,7 +12,7 @@ export function useTapGesture(
   options: UseTapGestureOptions = {}
 ) {
   const {
-    holdTime = 3000, // 3 seconds
+    holdTime = 5000, // 5 seconds
     onProgressUpdate,
     isOnCooldown = false,
     onCooldownAttempt,
@@ -30,7 +30,14 @@ export function useTapGesture(
       const now = Date.now();
       const onCooldown = now < cooldownUntilRef.current;
 
-      console.log("Gesture:", gesture, "| Thumbs Up:", isThumbsUp, "| Cooldown:", onCooldown);
+      console.log(
+        "Gesture:",
+        gesture,
+        "| Thumbs Up:",
+        isThumbsUp,
+        "| Cooldown:",
+        onCooldown
+      );
 
       if (isThumbsUp) {
         // Don't start tracking if on cooldown
@@ -72,7 +79,7 @@ export function useTapGesture(
         // Check if held long enough
         const heldDuration = now - thumbsUpStartTimeRef.current;
         if (heldDuration >= holdTime && thumbsUpStartTimeRef.current !== 0) {
-          console.log("✨💥 SPELL CAST! THUMBS UP HELD FOR 3 SECONDS!");
+          console.log("✨💥 SPELL CAST! THUMBS UP HELD FOR 5 SECONDS!");
 
           // Set cooldown IMMEDIATELY (45 seconds)
           cooldownUntilRef.current = now + 45000;

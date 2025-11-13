@@ -11,18 +11,19 @@
 ## Request
 
 ### Headers
+
 ```
 Content-Type: application/json
 ```
 
 ### Body Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `imageUrl` | string | Optional* | URL to an image file (JPEG, PNG) |
-| `imageBase64` | string | Optional* | Base64-encoded image data (include data URI prefix) |
-| `styleUrl` | string | Optional | URL to style reference image (defaults to Style 1) |
-| `previousContext` | string | Optional | Previously transcribed text for incremental story building |
+| Parameter         | Type   | Required   | Description                                                |
+| ----------------- | ------ | ---------- | ---------------------------------------------------------- |
+| `imageUrl`        | string | Optional\* | URL to an image file (JPEG, PNG)                           |
+| `imageBase64`     | string | Optional\* | Base64-encoded image data (include data URI prefix)        |
+| `styleUrl`        | string | Optional   | URL to style reference image (defaults to Style 1)         |
+| `previousContext` | string | Optional   | Previously transcribed text for incremental story building |
 
 **Note:** Either `imageUrl` OR `imageBase64` is required (not both).
 
@@ -136,10 +137,10 @@ async function generateStoryPage(imageFile: File, previousText?: string) {
     reader.readAsDataURL(imageFile);
   });
 
-  const response = await fetch('/api/generate', {
-    method: 'POST',
+  const response = await fetch("/api/generate", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
       imageBase64: base64,
@@ -154,27 +155,29 @@ async function generateStoryPage(imageFile: File, previousText?: string) {
 // Usage
 const file = document.querySelector('input[type="file"]').files[0];
 const result = await generateStoryPage(file);
-console.log('Transcription:', result.transcription);
-console.log('Generated Image:', result.generatedImages[0].url);
+console.log("Transcription:", result.transcription);
+console.log("Generated Image:", result.generatedImages[0].url);
 ```
 
 ### Using Axios
 
 ```typescript
-import axios from 'axios';
+import axios from "axios";
 
 async function generateStoryPage(imageUrl: string, styleUrl?: string) {
-  const response = await axios.post('/api/generate', {
+  const response = await axios.post("/api/generate", {
     imageUrl,
-    styleUrl: styleUrl || 'https://v3b.fal.media/files/b/lion/IEP3uGaGWS72ZkUem9cKV_style1.png',
+    styleUrl:
+      styleUrl ||
+      "https://v3b.fal.media/files/b/lion/IEP3uGaGWS72ZkUem9cKV_style1.png",
   });
 
   return response.data;
 }
 
 // Usage
-const result = await generateStoryPage('https://example.com/handwriting.jpg');
-console.log('Generated:', result);
+const result = await generateStoryPage("https://example.com/handwriting.jpg");
+console.log("Generated:", result);
 ```
 
 ---
@@ -183,10 +186,10 @@ console.log('Generated:', result);
 
 ### Available Styles
 
-| Style | URL |
-|-------|-----|
-| Style 1 (Default) | `https://v3b.fal.media/files/b/lion/IEP3uGaGWS72ZkUem9cKV_style1.png` |
-| Style 2 | `https://v3b.fal.media/files/b/panda/9zG6V8gEHgbrtSwC7pgLA_style2.png` |
+| Style             | URL                                                                    |
+| ----------------- | ---------------------------------------------------------------------- |
+| Style 1 (Default) | `https://v3b.fal.media/files/b/lion/IEP3uGaGWS72ZkUem9cKV_style1.png`  |
+| Style 2           | `https://v3b.fal.media/files/b/panda/9zG6V8gEHgbrtSwC7pgLA_style2.png` |
 
 ---
 
@@ -213,11 +216,11 @@ console.log('Generated:', result);
 
 Common errors and solutions:
 
-| Error | Cause | Solution |
-|-------|-------|----------|
-| `Either imageUrl or imageBase64 is required` | No image provided | Include `imageUrl` or `imageBase64` in request |
-| `Failed to process request` | Server error | Check image format and try again |
-| Timeout | Image too large or processing too slow | Reduce image size or simplify content |
+| Error                                        | Cause                                  | Solution                                       |
+| -------------------------------------------- | -------------------------------------- | ---------------------------------------------- |
+| `Either imageUrl or imageBase64 is required` | No image provided                      | Include `imageUrl` or `imageBase64` in request |
+| `Failed to process request`                  | Server error                           | Check image format and try again               |
+| Timeout                                      | Image too large or processing too slow | Reduce image size or simplify content          |
 
 ---
 
